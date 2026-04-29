@@ -729,11 +729,7 @@
     <h2 id="people-title">💕 Interested People</h2>
     <p class="modal-sub" id="people-item-label"></p>
     <div id="people-list"></div>
-    <details id="debug-panel" open style="margin-bottom:14px;font-size:.8rem;color:var(--text-light);">
-      <summary style="cursor:pointer;user-select:none;">🔍 Debug: raw sheet data</summary>
-      <pre id="debug-output" style="margin-top:8px;background:var(--cream);padding:10px;border-radius:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto;font-size:.75rem;line-height:1.5;"></pre>
-    </details>
-    <div class="modal-action-row">
+<div class="modal-action-row">
       <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
       <button class="btn-remove" onclick="removeItem()">🗑️ Remove Item</button>
     </div>
@@ -943,7 +939,6 @@ async function openPeopleModal(id) {
   }
 
   list.innerHTML = '<div class="loading-state">🌸 Loading responses…</div>';
-  document.getElementById('debug-output').textContent = 'Fetching…';
 
   try {
     /* cache-bust so we always get fresh data, not a stale browser cache */
@@ -952,10 +947,6 @@ async function openPeopleModal(id) {
     if (!res.ok) throw new Error(`HTTP ${res.status} — the sheet may not be published publicly`);
     const text = await res.text();
 
-    /* ── debug output ── */
-    const firstLines = text.split('\n').slice(0, 6).join('\n');
-    document.getElementById('debug-output').textContent =
-      `URL used:\n${GOOGLE_SHEETS_CSV_URL}\n\nFirst rows of CSV:\n${firstLines}`;
 
     const rows = parseCSV(text);
 
@@ -971,18 +962,9 @@ async function openPeopleModal(id) {
     const bidCol    = findCol(headers, 'bid', 'offer', 'amount', 'price');
     const pickupCol = findCol(headers, 'pickup', 'pick up', 'available');
 
-    /* append column-matching info to debug panel */
-    document.getElementById('debug-output').textContent +=
-      `\n\nColumn mapping found:\n` +
-      `  item   → "${itemCol   || '❌ NOT FOUND'}"\n` +
-      `  name   → "${nameCol   || '❌ NOT FOUND'}"\n` +
-      `  intent → "${intentCol || '❌ NOT FOUND'}"\n` +
-      `  bid    → "${bidCol    || '❌ NOT FOUND'}"\n` +
-      `  pickup → "${pickupCol || '❌ NOT FOUND'}"\n` +
-      `\nAll headers: ${headers.join(' | ')}`;
 
     if (!itemCol) {
-      list.innerHTML = `<div class="fetch-error">⚠️ Couldn't find an "item" column in your sheet.<br><span style="font-size:.85rem">Open the 🔍 debug panel below to see your actual column names.</span></div>`;
+      list.innerHTML = `<div class="fetch-error">⚠️ Couldn't find an "item" column in your sheet.<br><span style="font-size:.85rem">Make sure your form has a question containing the word "item".</span></div>`;
       return;
     }
 
@@ -991,10 +973,6 @@ async function openPeopleModal(id) {
       (r[itemCol] || '').toLowerCase().trim() === item.name.toLowerCase().trim()
     );
 
-    /* debug: show all unique item values found in sheet */
-    const allItemVals = [...new Set(rows.map(r => r[itemCol]).filter(Boolean))];
-    document.getElementById('debug-output').textContent +=
-      `\n\nLooking for item: "${item.name}"\nItem values in sheet: ${allItemVals.join(' | ') || '(none)'}`;
 
     if (!filtered.length) {
       list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet 🌸<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
@@ -1016,13 +994,11 @@ async function openPeopleModal(id) {
       </table>`;
 
   } catch (err) {
-    document.getElementById('debug-output').textContent = `Error: ${err.message}\n\nURL attempted:\n${GOOGLE_SHEETS_CSV_URL}`;
     list.innerHTML = `
       <div class="fetch-error">
         ⚠️ ${esc(err.message)}<br>
-        <span style="font-size:.85rem">Open 🔍 debug panel below for details. Common fixes:<br>
-        • In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong><br>
-        • Make sure you copied the published URL (not the regular sharing link)</span>
+        <span style="font-size:.85rem">Make sure your sheet is published to the web as CSV.<br>
+        In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong></span>
       </div>`;
     console.error('Sheets fetch error:', err);
   }
