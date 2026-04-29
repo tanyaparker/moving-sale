@@ -720,7 +720,49 @@
   <span class="footer-flowers" style="margin-top:22px;">🌷 🌼 🌻 🌼 🌷</span>
 </footer>
 
-<!-- Interest modal removed — "I'm Interested" now opens Google Form directly -->
+<!-- ═══════════════ MODAL: I'm Interested ═══════════════ -->
+<div class="overlay" id="overlay-interest" onclick="closeOnOverlay(event,'overlay-interest')">
+  <div class="modal" role="dialog" aria-labelledby="interest-title">
+    <button class="modal-close" onclick="closeModal('overlay-interest')" aria-label="Close">✕</button>
+    <h2 id="interest-title">💌 I'm Interested!</h2>
+    <p class="modal-sub" id="interest-item-label"></p>
+
+    <form id="interest-form" onsubmit="submitInterest(event)" novalidate>
+      <div class="form-group">
+        <label class="field-label" for="f-name">Full Name</label>
+        <input type="text" id="f-name" placeholder="Your full name" required autocomplete="name">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label">I'd like to…</label>
+        <div class="radio-row">
+          <label class="radio-tile">
+            <input type="radio" name="intent" value="Buy" onchange="onIntentChange(this)" required>
+            🛒 Buy
+          </label>
+          <label class="radio-tile">
+            <input type="radio" name="intent" value="Foster" onchange="onIntentChange(this)">
+            🏡 Foster
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" id="bid-group" style="display:none" aria-hidden="true">
+        <label class="field-label" for="f-bid">Your Bid (USD)</label>
+        <input type="number" id="f-bid" placeholder="e.g. 450" min="0" step="1">
+      </div>
+
+      <div class="form-group">
+        <label class="field-label" for="f-pickup">Pick Up Date & Time</label>
+        <input type="text" id="f-pickup" placeholder="e.g. May 7, afternoon" required>
+        <p class="helper">What date/time between May 4–10 works for you?</p>
+      </div>
+
+      <div id="interest-status"></div>
+      <button type="submit" class="btn-primary" id="interest-submit-btn">💌 Submit My Interest</button>
+    </form>
+  </div>
+</div>
 
 <!-- ═══════════════ MODAL: Interested People ═══════════════ -->
 <div class="overlay" id="overlay-people" onclick="closeOnOverlay(event,'overlay-people')">
@@ -782,9 +824,25 @@
 <!-- ═══════════════ SCRIPT ═══════════════ -->
 <script>
 /* ════════════════════════════════════════════════════
-   👇 PASTE YOUR GOOGLE FORM URL HERE
+   Google Form submission config
+   Form ID is extracted from your form's URL automatically.
+   Fill in the entry IDs for each question below.
+
+   HOW TO FIND YOUR ENTRY IDs (takes ~2 min):
+     1. Open your Google Form in a browser
+     2. Right-click the page → "View Page Source" (or Ctrl/Cmd+U)
+     3. Press Ctrl/Cmd+F and search for "entry."
+     4. You'll see values like entry.123456789 — match each one
+        to its question by the nearby label text and paste below.
    ════════════════════════════════════════════════════ */
-const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg/viewform?usp=sharing&ouid=105998230621662880568';
+const FORM_ID      = '1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg';
+const FORM_ENTRIES = {
+  item:   'entry.239046307',   // "Which item are you interested in?"
+  name:   'entry.2058262332',   // "Your full name"
+  intent: 'entry.981873326',   // "Buy or Foster?"
+  bid:    'entry.1272542183',   // "If buying, what's your bid?"
+  pickup: 'entry.1862878327',   // "Pick Up Date & Time"
+};
 
 /* ════════════════════════════════════════════════════
    👇 PASTE YOUR GOOGLE SHEETS CSV URL HERE
@@ -866,14 +924,72 @@ function openModal(id)  { document.getElementById(id).classList.add('open');  }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 function closeOnOverlay(e, id) { if (e.target.id === id) closeModal(id); }
 
-/* ─── Interest button → opens Google Form in new tab ─── */
+/* ─── Interest modal ─── */
 function openInterestModal(id) {
+  activeItemId = id;
   const item = items.find(i => i.id === id);
-  if (!GOOGLE_FORM_URL || GOOGLE_FORM_URL === 'YOUR_GOOGLE_FORM_URL_HERE') {
-    toast('⚠️ Add your Google Form URL to the HTML file first!');
+  document.getElementById('interest-item-label').textContent = `${item.name} — $${item.price.toLocaleString()}`;
+  document.getElementById('interest-form').reset();
+  document.getElementById('bid-group').style.display = 'none';
+  document.getElementById('bid-group').setAttribute('aria-hidden', 'true');
+  document.getElementById('f-bid').required = false;
+  document.getElementById('interest-status').innerHTML = '';
+  document.getElementById('interest-submit-btn').disabled = false;
+  document.getElementById('interest-submit-btn').textContent = '💌 Submit My Interest';
+  openModal('overlay-interest');
+}
+
+function onIntentChange(radio) {
+  const show = radio.value === 'Buy';
+  const grp  = document.getElementById('bid-group');
+  grp.style.display = show ? 'block' : 'none';
+  grp.setAttribute('aria-hidden', show ? 'false' : 'true');
+  document.getElementById('f-bid').required = show;
+  if (!show) document.getElementById('f-bid').value = '';
+}
+
+async function submitInterest(e) {
+  e.preventDefault();
+  const item   = items.find(i => i.id === activeItemId);
+  const name   = document.getElementById('f-name').value.trim();
+  const intent = document.querySelector('input[name="intent"]:checked')?.value;
+  const bid    = intent === 'Buy' ? document.getElementById('f-bid').value.trim() : '';
+  const pickup = document.getElementById('f-pickup').value.trim();
+
+  if (!name || !intent || !pickup || (intent === 'Buy' && !bid)) {
+    document.getElementById('interest-status').innerHTML =
+      '<p style="color:var(--pink-dark);font-weight:700;font-size:.88rem;margin-bottom:10px;">⚠️ Please fill in all required fields!</p>';
     return;
   }
-  window.open(GOOGLE_FORM_URL, '_blank');
+
+  const btn = document.getElementById('interest-submit-btn');
+  btn.disabled = true;
+  btn.textContent = '🌸 Sending…';
+  document.getElementById('interest-status').innerHTML = '';
+
+  const formUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
+  const body = new URLSearchParams({
+    [FORM_ENTRIES.item]:   item.name,
+    [FORM_ENTRIES.name]:   name,
+    [FORM_ENTRIES.intent]: intent,
+    [FORM_ENTRIES.bid]:    bid,
+    [FORM_ENTRIES.pickup]: pickup,
+  });
+
+  try {
+    /* mode: 'no-cors' — Google Forms doesn't allow cross-origin reads,
+       but the POST still goes through and lands in your sheet. */
+    await fetch(formUrl, { method: 'POST', mode: 'no-cors', body });
+    document.getElementById('interest-status').innerHTML =
+      '<p style="color:var(--mint-dark);font-weight:700;font-size:.92rem;margin-bottom:10px;">💌 Submitted! We\'ll be in touch!</p>';
+    btn.textContent = '✅ Submitted!';
+    setTimeout(() => closeModal('overlay-interest'), 1800);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '💌 Submit My Interest';
+    document.getElementById('interest-status').innerHTML =
+      '<p style="color:var(--pink-dark);font-weight:700;font-size:.88rem;margin-bottom:10px;">⚠️ Submission failed — please try again.</p>';
+  }
 }
 
 /* ─── CSV parser ─── */
