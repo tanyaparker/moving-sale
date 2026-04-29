@@ -608,6 +608,63 @@
 
   #toast.show { transform: translateX(-50%) translateY(0); }
 
+  /* ── Password modal ── */
+  .pw-modal {
+    max-width: 360px;
+    text-align: center;
+  }
+
+  .pw-modal h2 { font-size: 1.35rem; margin-bottom: 4px; }
+
+  .pw-icon {
+    font-size: 2.8rem;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  #pw-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2.5px solid var(--lavender-mid);
+    border-radius: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1.05rem;
+    text-align: center;
+    letter-spacing: 4px;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    margin: 18px 0 8px;
+  }
+
+  #pw-input:focus {
+    border-color: var(--lavender-dark);
+    box-shadow: 0 0 0 3px rgba(139,95,207,.12);
+  }
+
+  #pw-input.shake {
+    animation: shake .35s ease;
+    border-color: var(--pink-dark);
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-6px); }
+    80%      { transform: translateX(6px); }
+  }
+
+  #pw-error {
+    color: var(--pink-dark);
+    font-size: .85rem;
+    font-weight: 700;
+    min-height: 20px;
+    margin-bottom: 14px;
+    transition: opacity .2s;
+  }
+
   /* ── Loading spinner ── */
   .loading-state {
     text-align: center;
@@ -672,10 +729,28 @@
     <h2 id="people-title">💕 Interested People</h2>
     <p class="modal-sub" id="people-item-label"></p>
     <div id="people-list"></div>
+    <details id="debug-panel" open style="margin-bottom:14px;font-size:.8rem;color:var(--text-light);">
+      <summary style="cursor:pointer;user-select:none;">🔍 Debug: raw sheet data</summary>
+      <pre id="debug-output" style="margin-top:8px;background:var(--cream);padding:10px;border-radius:10px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:180px;overflow-y:auto;font-size:.75rem;line-height:1.5;"></pre>
+    </details>
     <div class="modal-action-row">
       <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
       <button class="btn-remove" onclick="removeItem()">🗑️ Remove Item</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: Password ═══════════════ -->
+<div class="overlay" id="overlay-pw" onclick="closeOnOverlay(event,'overlay-pw')">
+  <div class="modal pw-modal" role="dialog" aria-labelledby="pw-title">
+    <button class="modal-close" onclick="cancelPassword()" aria-label="Close">✕</button>
+    <span class="pw-icon">🔒</span>
+    <h2 id="pw-title">Admin only</h2>
+    <p class="modal-sub">Enter the password to continue.</p>
+    <input type="password" id="pw-input" placeholder="••••••" autocomplete="off"
+           onkeydown="if(event.key==='Enter')submitPassword()">
+    <div id="pw-error"></div>
+    <button class="btn-primary" onclick="submitPassword()">Unlock ✨</button>
   </div>
 </div>
 
@@ -868,15 +943,24 @@ async function openPeopleModal(id) {
   }
 
   list.innerHTML = '<div class="loading-state">🌸 Loading responses…</div>';
+  document.getElementById('debug-output').textContent = 'Fetching…';
 
   try {
-    const res = await fetch(GOOGLE_SHEETS_CSV_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    /* cache-bust so we always get fresh data, not a stale browser cache */
+    const url = GOOGLE_SHEETS_CSV_URL + (GOOGLE_SHEETS_CSV_URL.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status} — the sheet may not be published publicly`);
     const text = await res.text();
+
+    /* ── debug output ── */
+    const firstLines = text.split('\n').slice(0, 6).join('\n');
+    document.getElementById('debug-output').textContent =
+      `URL used:\n${GOOGLE_SHEETS_CSV_URL}\n\nFirst rows of CSV:\n${firstLines}`;
+
     const rows = parseCSV(text);
 
     if (!rows.length) {
-      list.innerHTML = '<div class="no-interest">No responses yet 🌸</div>';
+      list.innerHTML = '<div class="no-interest">Sheet is empty — no responses yet 🌸</div>';
       return;
     }
 
@@ -885,12 +969,32 @@ async function openPeopleModal(id) {
     const nameCol   = findCol(headers, 'name', 'full name');
     const intentCol = findCol(headers, 'buy', 'foster', 'intent', 'option', 'choice');
     const bidCol    = findCol(headers, 'bid', 'offer', 'amount', 'price');
-    const pickupCol = findCol(headers, 'pickup', 'pick up', 'date', 'time', 'available');
+    const pickupCol = findCol(headers, 'pickup', 'pick up', 'available');
 
-    /* filter to only rows matching this item (case-insensitive) */
+    /* append column-matching info to debug panel */
+    document.getElementById('debug-output').textContent +=
+      `\n\nColumn mapping found:\n` +
+      `  item   → "${itemCol   || '❌ NOT FOUND'}"\n` +
+      `  name   → "${nameCol   || '❌ NOT FOUND'}"\n` +
+      `  intent → "${intentCol || '❌ NOT FOUND'}"\n` +
+      `  bid    → "${bidCol    || '❌ NOT FOUND'}"\n` +
+      `  pickup → "${pickupCol || '❌ NOT FOUND'}"\n` +
+      `\nAll headers: ${headers.join(' | ')}`;
+
+    if (!itemCol) {
+      list.innerHTML = `<div class="fetch-error">⚠️ Couldn't find an "item" column in your sheet.<br><span style="font-size:.85rem">Open the 🔍 debug panel below to see your actual column names.</span></div>`;
+      return;
+    }
+
+    /* filter to only rows matching this item (case-insensitive, trimmed) */
     const filtered = rows.filter(r =>
-      itemCol && r[itemCol].toLowerCase().trim() === item.name.toLowerCase().trim()
+      (r[itemCol] || '').toLowerCase().trim() === item.name.toLowerCase().trim()
     );
+
+    /* debug: show all unique item values found in sheet */
+    const allItemVals = [...new Set(rows.map(r => r[itemCol]).filter(Boolean))];
+    document.getElementById('debug-output').textContent +=
+      `\n\nLooking for item: "${item.name}"\nItem values in sheet: ${allItemVals.join(' | ') || '(none)'}`;
 
     if (!filtered.length) {
       list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet 🌸<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
@@ -912,48 +1016,88 @@ async function openPeopleModal(id) {
       </table>`;
 
   } catch (err) {
+    document.getElementById('debug-output').textContent = `Error: ${err.message}\n\nURL attempted:\n${GOOGLE_SHEETS_CSV_URL}`;
     list.innerHTML = `
       <div class="fetch-error">
-        ⚠️ Couldn't load responses.<br>
-        <span style="font-size:.85rem">Make sure your sheet is published to the web as CSV.<br>
-        In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong></span>
+        ⚠️ ${esc(err.message)}<br>
+        <span style="font-size:.85rem">Open 🔍 debug panel below for details. Common fixes:<br>
+        • In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong><br>
+        • Make sure you copied the published URL (not the regular sharing link)</span>
       </div>`;
     console.error('Sheets fetch error:', err);
   }
 }
 
-function markSold() {
-  const item = items.find(i => i.id === activeItemId);
-  if (item.sold) {
-    item.sold = false;
-    save();
-    render();
-    closeModal('overlay-people');
-    toast(`↩️ "${item.name}" relisted as available!`);
+/* ─── Password gate ─── */
+const PASSWORD = 'buko';
+let _pwCallback = null;
+
+function requirePassword(callback) {
+  _pwCallback = callback;
+  const input = document.getElementById('pw-input');
+  const error = document.getElementById('pw-error');
+  input.value = '';
+  error.textContent = '';
+  input.classList.remove('shake');
+  openModal('overlay-pw');
+  setTimeout(() => input.focus(), 120);
+}
+
+function submitPassword() {
+  const input = document.getElementById('pw-input');
+  const error = document.getElementById('pw-error');
+  if (input.value === PASSWORD) {
+    closeModal('overlay-pw');
+    const cb = _pwCallback;
+    _pwCallback = null;
+    cb();
   } else {
-    item.sold = true;
-    save();
-    render();
-    closeModal('overlay-people');
-    toast(`🏷️ "${item.name}" marked as sold!`);
+    input.value = '';
+    error.textContent = '❌ Wrong password — try again!';
+    input.classList.remove('shake');
+    void input.offsetWidth; // force reflow so animation restarts
+    input.classList.add('shake');
+    input.focus();
   }
 }
 
+function cancelPassword() {
+  _pwCallback = null;
+  closeModal('overlay-pw');
+}
+
+function markSold() {
+  requirePassword(() => {
+    const item = items.find(i => i.id === activeItemId);
+    if (item.sold) {
+      item.sold = false;
+      save(); render(); closeModal('overlay-people');
+      toast(`↩️ "${item.name}" relisted as available!`);
+    } else {
+      item.sold = true;
+      save(); render(); closeModal('overlay-people');
+      toast(`🏷️ "${item.name}" marked as sold!`);
+    }
+  });
+}
+
 function removeItem() {
-  const item = items.find(i => i.id === activeItemId);
-  if (!confirm(`Remove "${item.name}" from the board? This can't be undone.`)) return;
-  items = items.filter(i => i.id !== activeItemId);
-  save();
-  render();
-  closeModal('overlay-people');
-  toast(`🗑️ "${item.name}" removed from the board.`);
+  requirePassword(() => {
+    const item = items.find(i => i.id === activeItemId);
+    if (!confirm(`Remove "${item.name}" from the board? This can't be undone.`)) return;
+    items = items.filter(i => i.id !== activeItemId);
+    save(); render(); closeModal('overlay-people');
+    toast(`🗑️ "${item.name}" removed from the board.`);
+  });
 }
 
 /* ─── Add Item modal ─── */
 function openAddModal() {
-  document.getElementById('add-form').reset();
-  document.getElementById('img-preview').style.display = 'none';
-  openModal('overlay-add');
+  requirePassword(() => {
+    document.getElementById('add-form').reset();
+    document.getElementById('img-preview').style.display = 'none';
+    openModal('overlay-add');
+  });
 }
 
 function previewImg(input) {
@@ -1016,9 +1160,10 @@ function esc(str) {
 /* ─── Keyboard: close modals with Escape ─── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['overlay-interest','overlay-people','overlay-add'].forEach(id => {
+    ['overlay-interest','overlay-people','overlay-add','overlay-pw'].forEach(id => {
       document.getElementById(id).classList.remove('open');
     });
+    _pwCallback = null;
   }
 });
 
