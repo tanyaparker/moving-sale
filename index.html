@@ -839,7 +839,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBQdLbX-4pyawt
      3. Choose "Sheet1" + "Comma-separated values (.csv)" → Publish
      4. Copy the URL and paste it below
    ════════════════════════════════════════════════════ */
-const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyLOja5zIIvbg-YYpjgaZZypvKkJUqG_AwaahNvWY_DuzDEDZlV9NoWt9ZBUj9V7E-8u0IAC-7Fn2j/pub?gid=369591672&single=true&output=csv';
+/* GOOGLE_SHEETS_CSV_URL removed — reads now go through APPS_SCRIPT_URL instead */
 
 /* ─── palette pools ─── */
 const COLORS  = ['#fad4e0','#e0d4fa','#d4fae8','#fae4d4','#d4eefa','#faf4d4','#f0d4fa'];
@@ -973,35 +973,6 @@ async function submitInterest(e) {
 }
 
 /* ─── CSV parser ─── */
-function splitCSVLine(line) {
-  const result = [];
-  let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
-    else cur += ch;
-  }
-  result.push(cur.trim());
-  return result;
-}
-
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length < 2) return [];
-  const headers = splitCSVLine(lines[0]);
-  return lines.slice(1).filter(l => l.trim()).map(line => {
-    const vals = splitCSVLine(line);
-    return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']));
-  });
-}
-
-function findCol(headers, ...keywords) {
-  return headers.find(h => keywords.some(k => h.toLowerCase().includes(k)));
-}
-
 function intentBadge(val) {
   const v = (val || '').toLowerCase();
   if (v.includes('buy'))    return '<span class="badge badge-buy">🛒 Buy</span>';
@@ -1009,7 +980,7 @@ function intentBadge(val) {
   return val ? `<span class="badge" style="background:var(--lavender);color:var(--lavender-dark)">${esc(val)}</span>` : '—';
 }
 
-/* ─── People modal (fetches live from Google Sheets) ─── */
+/* ─── People modal — fetches live JSON from Apps Script ─── */
 async function openPeopleModal(id) {
   activeItemId = id;
   const item = items.find(i => i.id === id);
@@ -1017,70 +988,37 @@ async function openPeopleModal(id) {
   document.getElementById('people-item-label').textContent = `Listed at $${item.price.toLocaleString()}`;
 
   const btn = document.getElementById('btn-sold');
-  if (item.sold) {
-    btn.textContent = '↩️ Mark as Unsold';
-    btn.classList.add('btn-unsold');
-  } else {
-    btn.textContent = '🏷️ Mark as Sold';
-    btn.classList.remove('btn-unsold');
-  }
+  btn.textContent = item.sold ? '↩️ Mark as Unsold' : '🏷️ Mark as Sold';
+  btn.classList.toggle('btn-unsold', item.sold);
 
   openModal('overlay-people');
 
   const list = document.getElementById('people-list');
 
-  if (!GOOGLE_SHEETS_CSV_URL || GOOGLE_SHEETS_CSV_URL === 'YOUR_GOOGLE_SHEETS_CSV_URL_HERE') {
-    list.innerHTML = '<div class="no-interest">📋 Paste your Google Sheets CSV URL into the HTML to see responses here.</div>';
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    list.innerHTML = '<div class="no-interest">📋 Add your Apps Script URL to the HTML to see responses here.</div>';
     return;
   }
 
   list.innerHTML = '<div class="loading-state">🌸 Loading responses…</div>';
 
   try {
-    /* cache-bust so we always get fresh data, not a stale browser cache */
-    const url = GOOGLE_SHEETS_CSV_URL + (GOOGLE_SHEETS_CSV_URL.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    const url = APPS_SCRIPT_URL + '?item=' + encodeURIComponent(item.name);
     const res  = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status} — the sheet may not be published publicly`);
-    const text = await res.text();
-
-
-    const rows = parseCSV(text);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const rows = await res.json();
 
     if (!rows.length) {
-      list.innerHTML = '<div class="no-interest">Sheet is empty — no responses yet 🌸</div>';
-      return;
-    }
-
-    const headers   = Object.keys(rows[0]);
-    const itemCol   = findCol(headers, 'item', 'furniture', 'piece', 'which');
-    const nameCol   = findCol(headers, 'name', 'full name');
-    const intentCol = findCol(headers, 'buy', 'foster', 'intent', 'option', 'choice');
-    const bidCol    = findCol(headers, 'bid', 'offer', 'amount', 'price');
-    const pickupCol = findCol(headers, 'pickup', 'pick up', 'available');
-
-
-    if (!itemCol) {
-      list.innerHTML = `<div class="fetch-error">⚠️ Couldn't find an "item" column in your sheet.<br><span style="font-size:.85rem">Make sure your form has a question containing the word "item".</span></div>`;
-      return;
-    }
-
-    /* filter to only rows matching this item (case-insensitive, trimmed) */
-    const filtered = rows.filter(r =>
-      (r[itemCol] || '').toLowerCase().trim() === item.name.toLowerCase().trim()
-    );
-
-
-    if (!filtered.length) {
       list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet 🌸<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
       return;
     }
 
-    const tableRows = filtered.map(r => `
+    const tableRows = rows.map(r => `
       <tr>
-        <td>${esc(r[nameCol]   || '—')}</td>
-        <td>${intentBadge(r[intentCol] || '')}</td>
-        <td>${r[bidCol] && r[bidCol].trim() ? '$' + esc(r[bidCol].replace(/^\$/, '')) : '<span style="color:var(--text-light)">—</span>'}</td>
-        <td>${esc(r[pickupCol] || '—')}</td>
+        <td>${esc(r.name   || '—')}</td>
+        <td>${intentBadge(r.intent)}</td>
+        <td>${r.bid && r.bid.trim() ? '$' + esc(r.bid.replace(/^\$/, '')) : '<span style="color:var(--text-light)">—</span>'}</td>
+        <td>${esc(r.pickup || '—')}</td>
       </tr>`).join('');
 
     list.innerHTML = `
@@ -1092,11 +1030,10 @@ async function openPeopleModal(id) {
   } catch (err) {
     list.innerHTML = `
       <div class="fetch-error">
-        ⚠️ ${esc(err.message)}<br>
-        <span style="font-size:.85rem">Make sure your sheet is published to the web as CSV.<br>
-        In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong></span>
+        ⚠️ Couldn't load responses.<br>
+        <span style="font-size:.85rem">Make sure your Apps Script is deployed as a Web App with access set to <strong>Anyone</strong>.</span>
       </div>`;
-    console.error('Sheets fetch error:', err);
+    console.error('Apps Script fetch error:', err);
   }
 }
 
