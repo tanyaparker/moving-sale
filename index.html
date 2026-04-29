@@ -608,6 +608,32 @@
 
   #toast.show { transform: translateX(-50%) translateY(0); }
 
+  /* ── Loading spinner ── */
+  .loading-state {
+    text-align: center;
+    padding: 36px 20px;
+    color: var(--text-light);
+    font-style: italic;
+    font-size: .95rem;
+    animation: breathe 1.6s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%,100% { opacity: 1; }
+    50%      { opacity: .35; }
+  }
+
+  .fetch-error {
+    text-align: center;
+    padding: 24px 20px;
+    color: var(--peach-dark);
+    background: var(--peach);
+    border-radius: 14px;
+    font-size: .9rem;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-track { background: var(--cream); }
@@ -645,12 +671,7 @@
     <button class="modal-close" onclick="closeModal('overlay-people')" aria-label="Close">✕</button>
     <h2 id="people-title">💕 Interested People</h2>
     <p class="modal-sub" id="people-item-label"></p>
-    <div id="people-list">
-      <div class="no-interest" style="text-align:left;padding:16px 0 8px;">
-        💌 Responses are collected in your <strong><a id="sheets-link" href="#" target="_blank" style="color:var(--pink-dark);">Google Form responses sheet</a></strong>.<br>
-        <span style="font-size:.85rem;color:var(--text-light);">Open Google Forms → your form → Responses tab to see who's interested.</span>
-      </div>
-    </div>
+    <div id="people-list"></div>
     <div class="modal-action-row">
       <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
       <button class="btn-remove" onclick="removeItem()">🗑️ Remove Item</button>
@@ -690,9 +711,19 @@
 <!-- ═══════════════ SCRIPT ═══════════════ -->
 <script>
 /* ════════════════════════════════════════════════════
-   👇 PASTE YOUR GOOGLE FORM URL HERE (Step 2 below)
+   👇 PASTE YOUR GOOGLE FORM URL HERE
    ════════════════════════════════════════════════════ */
 const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg/viewform?usp=sharing&ouid=105998230621662880568';
+
+/* ════════════════════════════════════════════════════
+   👇 PASTE YOUR GOOGLE SHEETS CSV URL HERE
+   How to get it:
+     1. Open your Google Form → Responses tab → click the green Sheets icon
+     2. In the sheet: File → Share → Publish to web
+     3. Choose "Sheet1" + "Comma-separated values (.csv)" → Publish
+     4. Copy the URL and paste it below
+   ════════════════════════════════════════════════════ */
+const GOOGLE_SHEETS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTyLOja5zIIvbg-YYpjgaZZypvKkJUqG_AwaahNvWY_DuzDEDZlV9NoWt9ZBUj9V7E-8u0IAC-7Fn2j/pub?gid=369591672&single=true&output=csv';
 
 /* ─── palette pools ─── */
 const COLORS  = ['#fad4e0','#e0d4fa','#d4fae8','#fae4d4','#d4eefa','#faf4d4','#f0d4fa'];
@@ -774,39 +805,49 @@ function openInterestModal(id) {
   window.open(GOOGLE_FORM_URL, '_blank');
 }
 
-/* ─── People modal ─── */
-function openPeopleModal(id) {
+/* ─── CSV parser ─── */
+function splitCSVLine(line) {
+  const result = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  result.push(cur.trim());
+  return result;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    const vals = splitCSVLine(line);
+    return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']));
+  });
+}
+
+function findCol(headers, ...keywords) {
+  return headers.find(h => keywords.some(k => h.toLowerCase().includes(k)));
+}
+
+function intentBadge(val) {
+  const v = (val || '').toLowerCase();
+  if (v.includes('buy'))    return '<span class="badge badge-buy">🛒 Buy</span>';
+  if (v.includes('foster')) return '<span class="badge badge-foster">🏡 Foster</span>';
+  return val ? `<span class="badge" style="background:var(--lavender);color:var(--lavender-dark)">${esc(val)}</span>` : '—';
+}
+
+/* ─── People modal (fetches live from Google Sheets) ─── */
+async function openPeopleModal(id) {
   activeItemId = id;
   const item = items.find(i => i.id === id);
   document.getElementById('people-title').textContent = `💕 ${item.name}`;
   document.getElementById('people-item-label').textContent = `Listed at $${item.price.toLocaleString()}`;
-
-  const list = document.getElementById('people-list');
-
-  if (!item.interested.length) {
-    list.innerHTML = '<div class="no-interest">No one has expressed interest yet 🌸<br>Be the first!</div>';
-  } else {
-    const rows = item.interested.map(p => `
-      <tr>
-        <td>${esc(p.name)}</td>
-        <td><span class="badge badge-${p.intent.toLowerCase()}">${p.intent === 'Buy' ? '🛒' : '🏡'} ${esc(p.intent)}</span></td>
-        <td>${p.bid ? '$' + Number(p.bid).toLocaleString() : '<span style="color:var(--text-light)">—</span>'}</td>
-        <td>${esc(p.pickup)}</td>
-      </tr>`).join('');
-
-    list.innerHTML = `
-      <table class="people-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Intent</th>
-            <th>Bid</th>
-            <th>Pickup</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
 
   const btn = document.getElementById('btn-sold');
   if (item.sold) {
@@ -818,6 +859,67 @@ function openPeopleModal(id) {
   }
 
   openModal('overlay-people');
+
+  const list = document.getElementById('people-list');
+
+  if (!GOOGLE_SHEETS_CSV_URL || GOOGLE_SHEETS_CSV_URL === 'YOUR_GOOGLE_SHEETS_CSV_URL_HERE') {
+    list.innerHTML = '<div class="no-interest">📋 Paste your Google Sheets CSV URL into the HTML to see responses here.</div>';
+    return;
+  }
+
+  list.innerHTML = '<div class="loading-state">🌸 Loading responses…</div>';
+
+  try {
+    const res = await fetch(GOOGLE_SHEETS_CSV_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const rows = parseCSV(text);
+
+    if (!rows.length) {
+      list.innerHTML = '<div class="no-interest">No responses yet 🌸</div>';
+      return;
+    }
+
+    const headers   = Object.keys(rows[0]);
+    const itemCol   = findCol(headers, 'item', 'furniture', 'piece', 'which');
+    const nameCol   = findCol(headers, 'name', 'full name');
+    const intentCol = findCol(headers, 'buy', 'foster', 'intent', 'option', 'choice');
+    const bidCol    = findCol(headers, 'bid', 'offer', 'amount', 'price');
+    const pickupCol = findCol(headers, 'pickup', 'pick up', 'date', 'time', 'available');
+
+    /* filter to only rows matching this item (case-insensitive) */
+    const filtered = rows.filter(r =>
+      itemCol && r[itemCol].toLowerCase().trim() === item.name.toLowerCase().trim()
+    );
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet 🌸<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
+      return;
+    }
+
+    const tableRows = filtered.map(r => `
+      <tr>
+        <td>${esc(r[nameCol]   || '—')}</td>
+        <td>${intentBadge(r[intentCol] || '')}</td>
+        <td>${r[bidCol] && r[bidCol].trim() ? '$' + esc(r[bidCol].replace(/^\$/, '')) : '<span style="color:var(--text-light)">—</span>'}</td>
+        <td>${esc(r[pickupCol] || '—')}</td>
+      </tr>`).join('');
+
+    list.innerHTML = `
+      <table class="people-table">
+        <thead><tr><th>Name</th><th>Intent</th><th>Bid</th><th>Pickup</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>`;
+
+  } catch (err) {
+    list.innerHTML = `
+      <div class="fetch-error">
+        ⚠️ Couldn't load responses.<br>
+        <span style="font-size:.85rem">Make sure your sheet is published to the web as CSV.<br>
+        In Google Sheets: <strong>File → Share → Publish to web → Sheet1 → CSV → Publish</strong></span>
+      </div>`;
+    console.error('Sheets fetch error:', err);
+  }
 }
 
 function markSold() {
