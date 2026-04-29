@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lulu and Tanya are moving! 🌸</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink:          #fad4e0;
+    --pink-mid:      #f4a7bf;
+    --pink-dark:     #d96b8e;
+    --lavender:      #e0d4fa;
+    --lavender-mid:  #c4aff0;
+    --lavender-dark: #8b5fcf;
+    --mint:          #d4fae8;
+    --mint-mid:      #a0e8c0;
+    --mint-dark:     #3faa72;
+    --peach:         #fae4d4;
+    --peach-mid:     #f0c4a0;
+    --peach-dark:    #d4804a;
+    --sky:           #d4eefa;
+    --sky-mid:       #a0d0f0;
+    --sky-dark:      #3a90d4;
+    --butter:        #faf4d4;
+    --butter-mid:    #f0e090;
+    --butter-dark:   #c0a020;
+    --lilac:         #f0d4fa;
+    --lilac-mid:     #d8a0f0;
+    --cream:         #fef8f0;
+    --text:          #4a3a4a;
+    --text-light:    #8a7090;
+    --white:         #ffffff;
+    --radius-card:   22px;
+    --shadow:        0 4px 24px rgba(160, 120, 160, 0.13);
+    --shadow-hover:  0 10px 36px rgba(160, 120, 160, 0.28);
+    --shadow-modal:  0 20px 60px rgba(100, 70, 120, 0.25);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background-color: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Decorative background blobs ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 10% 15%, rgba(250,212,224,.35) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 35% at 90% 25%, rgba(224,212,250,.35) 0%, transparent 65%),
+      radial-gradient(ellipse 45% 30% at 50% 90%, rgba(212,250,232,.3) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 70%, rgba(250,228,212,.28) 0%, transparent 60%);
+    z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    padding: 56px 24px 44px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-flowers {
+    font-size: 1.5rem;
+    letter-spacing: 10px;
+    margin-bottom: 18px;
+    opacity: .75;
+    display: block;
+    animation: sway 4s ease-in-out infinite;
+  }
+
+  @keyframes sway {
+    0%,100% { letter-spacing: 10px; }
+    50%      { letter-spacing: 14px; }
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.1rem, 5.5vw, 3.8rem);
+    color: var(--pink-dark);
+    line-height: 1.18;
+    margin-bottom: 22px;
+    text-shadow: 2px 3px 0 var(--lavender);
+  }
+
+  .description-box {
+    display: inline-block;
+    max-width: 720px;
+    background: white;
+    border: 2.5px dashed var(--pink-mid);
+    border-radius: 24px;
+    padding: 22px 34px;
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--text-light);
+    box-shadow: var(--shadow);
+  }
+
+  .description-box strong {
+    color: var(--pink-dark);
+    font-weight: 800;
+  }
+
+  .description-box .foster-word {
+    color: var(--mint-dark);
+  }
+
+  /* ── Masonry grid ── */
+  .grid {
+    column-count: 4;
+    column-gap: 22px;
+    padding: 36px 32px 20px;
+    max-width: 1420px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 1200px) { .grid { column-count: 3; } }
+  @media (max-width:  800px) { .grid { column-count: 2; } }
+  @media (max-width:  480px) { .grid { column-count: 1; } }
+
+  /* ── Card ── */
+  .card {
+    break-inside: avoid;
+    margin-bottom: 22px;
+    background: white;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform .3s ease, box-shadow .3s ease;
+    position: relative;
+    border: 1.5px solid rgba(255,255,255,.8);
+  }
+
+  .card:hover {
+    transform: translateY(-5px) rotate(.4deg);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .card.sold {
+    filter: grayscale(.65) opacity(.6) saturate(.5);
+  }
+
+  .sold-ribbon {
+    display: none;
+    position: absolute;
+    top: 14px;
+    right: -8px;
+    background: var(--text);
+    color: white;
+    font-size: .7rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 5px 18px 5px 14px;
+    border-radius: 4px 0 0 4px;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .sold-ribbon::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    top: 0;
+    border-width: 13px 8px 13px 0;
+    border-style: solid;
+    border-color: transparent var(--text) transparent transparent;
+  }
+
+  .card.sold .sold-ribbon { display: block; }
+
+  /* ── Card image ── */
+  .card-img-wrap {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .card-img-wrap::after {
+    content: '👁 View Interest';
+    position: absolute;
+    inset: 0;
+    background: rgba(74,58,74,.62);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    opacity: 0;
+    transition: opacity .25s;
+    backdrop-filter: blur(2px);
+  }
+
+  .card-img-wrap:hover::after { opacity: 1; }
+
+  .card-img {
+    width: 100%;
+    display: block;
+    object-fit: cover;
+    transition: transform .4s ease;
+  }
+
+  .card-img-wrap:hover .card-img { transform: scale(1.06); }
+
+  .placeholder-img {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4.5rem;
+    transition: transform .4s ease;
+    user-select: none;
+  }
+
+  .card-img-wrap:hover .placeholder-img { transform: scale(1.06); }
+
+  /* ── Card body ── */
+  .card-body {
+    padding: 16px 18px 18px;
+  }
+
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.07rem;
+    font-weight: 700;
+    margin-bottom: 5px;
+    color: var(--text);
+  }
+
+  .card-price {
+    font-size: 1.22rem;
+    font-weight: 800;
+    color: var(--pink-dark);
+    margin-bottom: 14px;
+  }
+
+  .btn-interest {
+    width: 100%;
+    padding: 11px 12px;
+    background: linear-gradient(130deg, var(--pink-mid), var(--lavender-mid));
+    border: none;
+    border-radius: 14px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: .92rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .25s ease;
+    letter-spacing: .2px;
+  }
+
+  .btn-interest:hover {
+    background: linear-gradient(130deg, var(--pink-dark), var(--lavender-dark));
+    color: white;
+    transform: scale(1.03);
+    box-shadow: 0 4px 14px rgba(180,100,160,.35);
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 20px 60px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .footer-flowers {
+    font-size: 1.2rem;
+    letter-spacing: 8px;
+    opacity: .55;
+    margin-bottom: 22px;
+    display: block;
+  }
+
+  .btn-add {
+    background: white;
+    border: 2.5px dashed var(--mint-dark);
+    border-radius: 50px;
+    padding: 13px 34px;
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    font-weight: 800;
+    color: var(--mint-dark);
+    cursor: pointer;
+    transition: all .25s ease;
+    letter-spacing: .3px;
+    box-shadow: var(--shadow);
+  }
+
+  .btn-add:hover {
+    background: var(--mint-dark);
+    border-style: solid;
+    color: white;
+    transform: scale(1.04);
+    box-shadow: 0 6px 20px rgba(63,170,114,.3);
+  }
+
+  /* ── Modal overlay ── */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(74,58,74,.45);
+    backdrop-filter: blur(5px);
+    z-index: 900;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .overlay.open { display: flex; }
+
+  /* ── Modal box ── */
+  .modal {
+    background: white;
+    border-radius: 28px;
+    padding: 40px 38px 36px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-modal);
+    position: relative;
+    animation: popIn .3s cubic-bezier(.34,1.56,.64,1);
+    border: 1.5px solid rgba(250,212,224,.6);
+  }
+
+  .modal.wide { max-width: 620px; }
+
+  @keyframes popIn {
+    from { transform: scale(.88) translateY(24px); opacity: 0; }
+    to   { transform: scale(1) translateY(0);      opacity: 1; }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 18px;
+    width: 34px; height: 34px;
+    background: var(--pink);
+    border: none; border-radius: 50%;
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+    color: var(--pink-dark);
+    font-weight: 700;
+  }
+
+  .modal-close:hover { background: var(--pink-dark); color: white; }
+
+  .modal h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--pink-dark);
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+  }
+
+  .modal .modal-sub {
+    color: var(--text-light);
+    font-size: .9rem;
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+
+  /* ── Form elements ── */
+  .form-group { margin-bottom: 22px; }
+
+  .form-group label.field-label {
+    display: block;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: .95rem;
+  }
+
+  .form-group input[type="text"],
+  .form-group input[type="number"],
+  .form-group input[type="file"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--lavender-mid);
+    border-radius: 14px;
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    color: var(--text);
+    background: var(--cream);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+
+  .form-group input:focus {
+    border-color: var(--lavender-dark);
+    box-shadow: 0 0 0 3px rgba(139,95,207,.12);
+  }
+
+  .helper {
+    margin-top: 5px;
+    font-size: .8rem;
+    color: var(--text-light);
+  }
+
+  /* ── Radio group ── */
+  .radio-row {
+    display: flex;
+    gap: 14px;
+  }
+
+  .radio-tile {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 16px;
+    border: 2.5px solid var(--lavender-mid);
+    border-radius: 14px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .95rem;
+    transition: all .2s;
+    user-select: none;
+    color: var(--text);
+  }
+
+  .radio-tile:has(input:checked) {
+    border-color: var(--pink-dark);
+    background: var(--pink);
+    color: var(--pink-dark);
+  }
+
+  .radio-tile input[type="radio"] {
+    accent-color: var(--pink-dark);
+    width: 17px; height: 17px;
+    flex-shrink: 0;
+  }
+
+  /* ── Submit / action buttons ── */
+  .btn-primary {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(130deg, var(--pink-dark), var(--lavender-dark));
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .25s;
+    margin-top: 6px;
+    letter-spacing: .3px;
+  }
+
+  .btn-primary:hover {
+    opacity: .88;
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(180,80,150,.3);
+  }
+
+  .btn-sold {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(130deg, #b89ab8, #8a6e9e);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .25s;
+    letter-spacing: .3px;
+  }
+
+  .btn-sold:hover:not(:disabled) {
+    opacity: .88;
+    transform: scale(1.02);
+  }
+
+  .btn-unsold {
+    background: linear-gradient(130deg, #a8c8a0, #6a9e62);
+  }
+
+  .btn-remove {
+    padding: 13px;
+    background: linear-gradient(130deg, #e8a0a0, #c05858);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: .95rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .25s;
+    letter-spacing: .3px;
+    flex: 1;
+  }
+
+  .btn-remove:hover {
+    opacity: .88;
+    transform: scale(1.02);
+  }
+
+  .modal-action-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .modal-action-row .btn-sold {
+    flex: 1;
+    width: auto;
+  }
+
+  /* ── Interested people table ── */
+  .people-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .88rem;
+    margin-bottom: 24px;
+  }
+
+  .people-table th {
+    background: linear-gradient(130deg, var(--pink), var(--lavender));
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 800;
+    color: var(--text);
+    font-size: .82rem;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+  }
+
+  .people-table th:first-child { border-radius: 12px 0 0 0; }
+  .people-table th:last-child  { border-radius: 0 12px 0 0; }
+
+  .people-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--lavender);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .people-table tr:last-child td { border-bottom: none; }
+  .people-table tbody tr:nth-child(even) td { background: var(--cream); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 11px;
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .3px;
+  }
+
+  .badge-buy    { background: var(--peach);  color: var(--peach-dark); }
+  .badge-foster { background: var(--mint);   color: var(--mint-dark);  }
+
+  .no-interest {
+    text-align: center;
+    color: var(--text-light);
+    padding: 36px 20px;
+    font-style: italic;
+    font-size: .95rem;
+  }
+
+  /* ── Image preview ── */
+  #img-preview {
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: 14px;
+    margin-top: 10px;
+    display: none;
+    border: 2px solid var(--lavender-mid);
+  }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: linear-gradient(130deg, var(--pink-dark), var(--lavender-dark));
+    color: white;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-weight: 800;
+    font-size: .95rem;
+    z-index: 9999;
+    transition: transform .4s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 8px 30px rgba(140,80,140,.35);
+    pointer-events: none;
+  }
+
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--cream); }
+  ::-webkit-scrollbar-thumb { background: var(--pink-mid); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header>
+  <span class="header-flowers">🌸 🌷 🌼 🌻 🌼 🌷 🌸</span>
+  <h1>Lulu and Tanya are moving! 🌸</h1>
+  <p class="description-box">
+    We're downsizing and want to offer our furniture to our friends and family to either
+    <strong>Buy</strong> (prices flexible) or <strong class="foster-word">Foster</strong>
+    (hold on to the furniture for free until we buy our home in a few years and reclaim).&nbsp;💕
+  </p>
+</header>
+
+<!-- ═══════════════ GRID ═══════════════ -->
+<div class="grid" id="grid"></div>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <span class="footer-flowers">🌷 🌼 🌻 🌼 🌷</span>
+  <button class="btn-add" onclick="openAddModal()">＋ Add Item</button>
+  <span class="footer-flowers" style="margin-top:22px;">🌷 🌼 🌻 🌼 🌷</span>
+</footer>
+
+<!-- Interest modal removed — "I'm Interested" now opens Google Form directly -->
+
+<!-- ═══════════════ MODAL: Interested People ═══════════════ -->
+<div class="overlay" id="overlay-people" onclick="closeOnOverlay(event,'overlay-people')">
+  <div class="modal wide" role="dialog" aria-labelledby="people-title">
+    <button class="modal-close" onclick="closeModal('overlay-people')" aria-label="Close">✕</button>
+    <h2 id="people-title">💕 Interested People</h2>
+    <p class="modal-sub" id="people-item-label"></p>
+    <div id="people-list">
+      <div class="no-interest" style="text-align:left;padding:16px 0 8px;">
+        💌 Responses are collected in your <strong><a id="sheets-link" href="#" target="_blank" style="color:var(--pink-dark);">Google Form responses sheet</a></strong>.<br>
+        <span style="font-size:.85rem;color:var(--text-light);">Open Google Forms → your form → Responses tab to see who's interested.</span>
+      </div>
+    </div>
+    <div class="modal-action-row">
+      <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
+      <button class="btn-remove" onclick="removeItem()">🗑️ Remove Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: Add Item ═══════════════ -->
+<div class="overlay" id="overlay-add" onclick="closeOnOverlay(event,'overlay-add')">
+  <div class="modal" role="dialog" aria-labelledby="add-title">
+    <button class="modal-close" onclick="closeModal('overlay-add')" aria-label="Close">✕</button>
+    <h2 id="add-title">🌸 Add New Item</h2>
+    <p class="modal-sub">List a furniture piece for your friends and family.</p>
+
+    <form id="add-form" onsubmit="addItem(event)" novalidate>
+      <div class="form-group">
+        <label class="field-label" for="a-name">Item Name</label>
+        <input type="text" id="a-name" placeholder="e.g. Blue Velvet Sofa" required>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="a-price">Asking Price (USD)</label>
+        <input type="number" id="a-price" placeholder="e.g. 500" min="0" required>
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="a-img">Photo (optional)</label>
+        <input type="file" id="a-img" accept="image/*" onchange="previewImg(this)">
+        <img id="img-preview" src="" alt="Preview">
+      </div>
+      <button type="submit" class="btn-primary">🌼 Add to Board</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ═══════════════ SCRIPT ═══════════════ -->
+<script>
+/* ════════════════════════════════════════════════════
+   👇 PASTE YOUR GOOGLE FORM URL HERE (Step 2 below)
+   ════════════════════════════════════════════════════ */
+const GOOGLE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg/viewform?usp=sharing&ouid=105998230621662880568';
+
+/* ─── palette pools ─── */
+const COLORS  = ['#fad4e0','#e0d4fa','#d4fae8','#fae4d4','#d4eefa','#faf4d4','#f0d4fa'];
+const EMOJIS  = ['🛋️','🪑','🛏️','🪞','📚','☕','🖼️','🏮','🪴','🕯️','🧸','🗄️','🛁','🪟'];
+
+/* ─── seed data ─── */
+function seedItems() {
+  return [
+    { id:1, name:'Velvet Sofa',           price:500, emoji:'🛋️', color:'#fad4e0', imgData:null, interested:[], sold:false },
+    { id:2, name:'Walnut Dining Table',   price:350, emoji:'🍽️', color:'#fae4d4', imgData:null, interested:[], sold:false },
+    { id:3, name:'Bookshelf',             price:120, emoji:'📚', color:'#e0d4fa', imgData:null, interested:[], sold:false },
+    { id:4, name:'Queen Bed Frame',       price:275, emoji:'🛏️', color:'#d4fae8', imgData:null, interested:[], sold:false },
+    { id:5, name:'Vintage Armchair',      price:180, emoji:'🪑', color:'#d4eefa', imgData:null, interested:[], sold:false },
+    { id:6, name:'Mid-Century Coffee Table', price:95, emoji:'☕', color:'#faf4d4', imgData:null, interested:[], sold:false },
+    { id:7, name:'Standing Floor Mirror',  price:140, emoji:'🪞', color:'#f0d4fa', imgData:null, interested:[], sold:false },
+    { id:8, name:'6-Drawer Dresser',      price:230, emoji:'🗄️', color:'#fad4e0', imgData:null, interested:[], sold:false },
+  ];
+}
+
+/* ─── state ─── */
+let items = [];
+let activeItemId = null;
+
+/* ─── persistence ─── */
+function save()  { try { localStorage.setItem('movingSale_v2', JSON.stringify(items)); } catch(e){} }
+function load()  {
+  try {
+    const raw = localStorage.getItem('movingSale_v2');
+    if (raw) { items = JSON.parse(raw); return; }
+  } catch(e) {}
+  items = seedItems();
+}
+
+/* ─── render grid ─── */
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  items.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card' + (item.sold ? ' sold' : '');
+    card.id = 'card-' + item.id;
+
+    /* vary placeholder height for Pinterest feel */
+    const heights = [170, 200, 225, 185, 210, 190, 215, 180];
+    const h = heights[(item.id - 1) % heights.length];
+
+    const imgHtml = item.imgData
+      ? `<img class="card-img" src="${item.imgData}" alt="${esc(item.name)}" style="max-height:${h + 60}px;">`
+      : `<div class="placeholder-img" style="height:${h}px;background:${item.color};">${item.emoji}</div>`;
+
+    card.innerHTML = `
+      <div class="sold-ribbon">SOLD 💕</div>
+      <div class="card-img-wrap" onclick="openPeopleModal(${item.id})" title="Click to view interest">
+        ${imgHtml}
+      </div>
+      <div class="card-body">
+        <div class="card-name">${esc(item.name)}</div>
+        <div class="card-price">$${item.price.toLocaleString()}</div>
+        <button class="btn-interest" onclick="openInterestModal(${item.id})">💌 I'm Interested</button>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+}
+
+/* ─── open/close modals ─── */
+function openModal(id)  { document.getElementById(id).classList.add('open');  }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeOnOverlay(e, id) { if (e.target.id === id) closeModal(id); }
+
+/* ─── Interest button → opens Google Form in new tab ─── */
+function openInterestModal(id) {
+  const item = items.find(i => i.id === id);
+  if (!GOOGLE_FORM_URL || GOOGLE_FORM_URL === 'YOUR_GOOGLE_FORM_URL_HERE') {
+    toast('⚠️ Add your Google Form URL to the HTML file first!');
+    return;
+  }
+  window.open(GOOGLE_FORM_URL, '_blank');
+}
+
+/* ─── People modal ─── */
+function openPeopleModal(id) {
+  activeItemId = id;
+  const item = items.find(i => i.id === id);
+  document.getElementById('people-title').textContent = `💕 ${item.name}`;
+  document.getElementById('people-item-label').textContent = `Listed at $${item.price.toLocaleString()}`;
+
+  const list = document.getElementById('people-list');
+
+  if (!item.interested.length) {
+    list.innerHTML = '<div class="no-interest">No one has expressed interest yet 🌸<br>Be the first!</div>';
+  } else {
+    const rows = item.interested.map(p => `
+      <tr>
+        <td>${esc(p.name)}</td>
+        <td><span class="badge badge-${p.intent.toLowerCase()}">${p.intent === 'Buy' ? '🛒' : '🏡'} ${esc(p.intent)}</span></td>
+        <td>${p.bid ? '$' + Number(p.bid).toLocaleString() : '<span style="color:var(--text-light)">—</span>'}</td>
+        <td>${esc(p.pickup)}</td>
+      </tr>`).join('');
+
+    list.innerHTML = `
+      <table class="people-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Intent</th>
+            <th>Bid</th>
+            <th>Pickup</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  const btn = document.getElementById('btn-sold');
+  if (item.sold) {
+    btn.textContent = '↩️ Mark as Unsold';
+    btn.classList.add('btn-unsold');
+  } else {
+    btn.textContent = '🏷️ Mark as Sold';
+    btn.classList.remove('btn-unsold');
+  }
+
+  openModal('overlay-people');
+}
+
+function markSold() {
+  const item = items.find(i => i.id === activeItemId);
+  if (item.sold) {
+    item.sold = false;
+    save();
+    render();
+    closeModal('overlay-people');
+    toast(`↩️ "${item.name}" relisted as available!`);
+  } else {
+    item.sold = true;
+    save();
+    render();
+    closeModal('overlay-people');
+    toast(`🏷️ "${item.name}" marked as sold!`);
+  }
+}
+
+function removeItem() {
+  const item = items.find(i => i.id === activeItemId);
+  if (!confirm(`Remove "${item.name}" from the board? This can't be undone.`)) return;
+  items = items.filter(i => i.id !== activeItemId);
+  save();
+  render();
+  closeModal('overlay-people');
+  toast(`🗑️ "${item.name}" removed from the board.`);
+}
+
+/* ─── Add Item modal ─── */
+function openAddModal() {
+  document.getElementById('add-form').reset();
+  document.getElementById('img-preview').style.display = 'none';
+  openModal('overlay-add');
+}
+
+function previewImg(input) {
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const prev = document.getElementById('img-preview');
+      prev.src = e.target.result;
+      prev.style.display = 'block';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function addItem(e) {
+  e.preventDefault();
+  const name  = document.getElementById('a-name').value.trim();
+  const price = parseInt(document.getElementById('a-price').value, 10);
+  const file  = document.getElementById('a-img').files[0];
+
+  if (!name || isNaN(price)) { toast('⚠️ Please fill in name and price!'); return; }
+
+  const newId   = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
+  const color   = COLORS [newId % COLORS.length];
+  const emoji   = EMOJIS [newId % EMOJIS.length];
+
+  const push = (imgData) => {
+    items.push({ id:newId, name, price, emoji, color, imgData: imgData || null, interested:[], sold:false });
+    save();
+    render();
+    closeModal('overlay-add');
+    toast('🌸 New item added to the board!');
+  };
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = ev => push(ev.target.result);
+    reader.readAsDataURL(file);
+  } else {
+    push(null);
+  }
+}
+
+/* ─── Toast ─── */
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ─── Escape HTML ─── */
+function esc(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ─── Keyboard: close modals with Escape ─── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['overlay-interest','overlay-people','overlay-add'].forEach(id => {
+      document.getElementById(id).classList.remove('open');
+    });
+  }
+});
+
+/* ─── Init ─── */
+load();
+render();
+</script>
+</body>
+</html>
