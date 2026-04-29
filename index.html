@@ -827,25 +827,9 @@
 <!-- ═══════════════ SCRIPT ═══════════════ -->
 <script>
 /* ════════════════════════════════════════════════════
-   Google Form submission config
-   Form ID is extracted from your form's URL automatically.
-   Fill in the entry IDs for each question below.
-
-   HOW TO FIND YOUR ENTRY IDs (takes ~2 min):
-     1. Open your Google Form in a browser
-     2. Right-click the page → "View Page Source" (or Ctrl/Cmd+U)
-     3. Press Ctrl/Cmd+F and search for "entry."
-     4. You'll see values like entry.123456789 — match each one
-        to its question by the nearby label text and paste below.
+   👇 PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE
    ════════════════════════════════════════════════════ */
-const FORM_ID      = '1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg';
-const FORM_ENTRIES = {
-  item:   'entry.1862878327',   // "Which item are you interested in?"
-  name:   'entry.2058262332',   // "Your full name"
-  intent: 'entry.1272542183',   // "Buy or Foster?"
-  bid:    'entry.239046307',   // "If buying, what's your bid?"
-  pickup: 'entry.981873326',   // "Pick Up Date & Time"
-};
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBQdLbX-4pyawtvCIRuSRjX9wxwmTwfzkfjMFxLZWDmwoqU1wZ6jJc1qbzfkdMRYyXWw/exec';
 
 /* ════════════════════════════════════════════════════
    👇 PASTE YOUR GOOGLE SHEETS CSV URL HERE
@@ -951,7 +935,7 @@ function onIntentChange(radio) {
   if (!show) document.getElementById('f-bid').value = '';
 }
 
-function submitInterest(e) {
+async function submitInterest(e) {
   e.preventDefault();
   const item   = items.find(i => i.id === activeItemId);
   const name   = document.getElementById('f-name').value.trim();
@@ -970,43 +954,22 @@ function submitInterest(e) {
   btn.textContent = '🌸 Sending…';
   document.getElementById('interest-status').innerHTML = '';
 
-  /* Build a real HTML form and POST it into the hidden iframe.
-     This is the most reliable cross-origin submission method —
-     no CORS restrictions, no opaque responses masking failures. */
-  const formUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
-  const tempForm = document.createElement('form');
-  tempForm.method  = 'POST';
-  tempForm.action  = formUrl;
-  tempForm.target  = 'gform-iframe';
-  tempForm.style.display = 'none';
-
-  const fields = [
-    [FORM_ENTRIES.item,   item.name],
-    [FORM_ENTRIES.name,   name],
-    [FORM_ENTRIES.intent, intent],
-    [FORM_ENTRIES.bid,    bid],
-    [FORM_ENTRIES.pickup, pickup],
-  ];
-
-  fields.forEach(([entryId, value]) => {
-    if (!entryId || entryId === 'entry.XXXXXXXXX') return; // skip unfilled placeholders
-    const input = document.createElement('input');
-    input.type  = 'hidden';
-    input.name  = entryId;
-    input.value = value;
-    tempForm.appendChild(input);
-  });
-
-  document.body.appendChild(tempForm);
-  tempForm.submit();
-  document.body.removeChild(tempForm);
-
-  /* Show confirmation — the iframe POST fires and forgets,
-     just like a real form submit, so we confirm immediately. */
-  document.getElementById('interest-status').innerHTML =
-    '<p style="color:var(--mint-dark);font-weight:700;font-size:.92rem;margin-bottom:10px;">💌 Submitted! We\'ll be in touch!</p>';
-  btn.textContent = '✅ Submitted!';
-  setTimeout(() => closeModal('overlay-interest'), 1800);
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode:   'no-cors',   // Apps Script doesn't need to send back a readable response
+      body:   JSON.stringify({ item: item.name, name, intent, bid, pickup }),
+    });
+    document.getElementById('interest-status').innerHTML =
+      '<p style="color:var(--mint-dark);font-weight:700;font-size:.92rem;margin-bottom:10px;">💌 Submitted! We\'ll be in touch!</p>';
+    btn.textContent = '✅ Submitted!';
+    setTimeout(() => closeModal('overlay-interest'), 1800);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = '💌 Submit My Interest';
+    document.getElementById('interest-status').innerHTML =
+      '<p style="color:var(--pink-dark);font-weight:700;font-size:.88rem;margin-bottom:10px;">⚠️ Submission failed — please try again.</p>';
+  }
 }
 
 /* ─── CSV parser ─── */
