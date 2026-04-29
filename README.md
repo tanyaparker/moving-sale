@@ -10,5 +10,5 @@ Interest form (will submit to a google form behind the scenes):
 Show interested parties:
 <img width="1512" height="827" alt="image" src="https://github.com/user-attachments/assets/c75c6aed-a376-4ead-b98f-d68afaab0636" />
 
-Add/remove item and Mark as Sold/Unsold are admin actions locked by a password:
+Add/remove item and Mark as Sold/Unsold are password protected admin actions:
 <img width="1512" height="829" alt="image" src="https://github.com/user-attachments/assets/ef8b530b-bb2b-4ed5-b75c-e7d8cf1737d8" />
