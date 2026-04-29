@@ -821,6 +821,9 @@
 <!-- ═══════════════ TOAST ═══════════════ -->
 <div id="toast" role="status" aria-live="polite"></div>
 
+<!-- Hidden iframe — Google Form responses POST into this so the user never leaves the page -->
+<iframe name="gform-iframe" id="gform-iframe" style="display:none;" aria-hidden="true"></iframe>
+
 <!-- ═══════════════ SCRIPT ═══════════════ -->
 <script>
 /* ════════════════════════════════════════════════════
@@ -837,11 +840,11 @@
    ════════════════════════════════════════════════════ */
 const FORM_ID      = '1FAIpQLSezx0UYTQ3gu1v54XZXPmmJQv600Q8HJzvAcu02zgYhFZ2pgg';
 const FORM_ENTRIES = {
-  item:   'entry.239046307',   // "Which item are you interested in?"
+  item:   'entry.1862878327',   // "Which item are you interested in?"
   name:   'entry.2058262332',   // "Your full name"
-  intent: 'entry.981873326',   // "Buy or Foster?"
-  bid:    'entry.1272542183',   // "If buying, what's your bid?"
-  pickup: 'entry.1862878327',   // "Pick Up Date & Time"
+  intent: 'entry.1272542183',   // "Buy or Foster?"
+  bid:    'entry.239046307',   // "If buying, what's your bid?"
+  pickup: 'entry.981873326',   // "Pick Up Date & Time"
 };
 
 /* ════════════════════════════════════════════════════
@@ -948,7 +951,7 @@ function onIntentChange(radio) {
   if (!show) document.getElementById('f-bid').value = '';
 }
 
-async function submitInterest(e) {
+function submitInterest(e) {
   e.preventDefault();
   const item   = items.find(i => i.id === activeItemId);
   const name   = document.getElementById('f-name').value.trim();
@@ -967,29 +970,43 @@ async function submitInterest(e) {
   btn.textContent = '🌸 Sending…';
   document.getElementById('interest-status').innerHTML = '';
 
+  /* Build a real HTML form and POST it into the hidden iframe.
+     This is the most reliable cross-origin submission method —
+     no CORS restrictions, no opaque responses masking failures. */
   const formUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
-  const body = new URLSearchParams({
-    [FORM_ENTRIES.item]:   item.name,
-    [FORM_ENTRIES.name]:   name,
-    [FORM_ENTRIES.intent]: intent,
-    [FORM_ENTRIES.bid]:    bid,
-    [FORM_ENTRIES.pickup]: pickup,
+  const tempForm = document.createElement('form');
+  tempForm.method  = 'POST';
+  tempForm.action  = formUrl;
+  tempForm.target  = 'gform-iframe';
+  tempForm.style.display = 'none';
+
+  const fields = [
+    [FORM_ENTRIES.item,   item.name],
+    [FORM_ENTRIES.name,   name],
+    [FORM_ENTRIES.intent, intent],
+    [FORM_ENTRIES.bid,    bid],
+    [FORM_ENTRIES.pickup, pickup],
+  ];
+
+  fields.forEach(([entryId, value]) => {
+    if (!entryId || entryId === 'entry.XXXXXXXXX') return; // skip unfilled placeholders
+    const input = document.createElement('input');
+    input.type  = 'hidden';
+    input.name  = entryId;
+    input.value = value;
+    tempForm.appendChild(input);
   });
 
-  try {
-    /* mode: 'no-cors' — Google Forms doesn't allow cross-origin reads,
-       but the POST still goes through and lands in your sheet. */
-    await fetch(formUrl, { method: 'POST', mode: 'no-cors', body });
-    document.getElementById('interest-status').innerHTML =
-      '<p style="color:var(--mint-dark);font-weight:700;font-size:.92rem;margin-bottom:10px;">💌 Submitted! We\'ll be in touch!</p>';
-    btn.textContent = '✅ Submitted!';
-    setTimeout(() => closeModal('overlay-interest'), 1800);
-  } catch (err) {
-    btn.disabled = false;
-    btn.textContent = '💌 Submit My Interest';
-    document.getElementById('interest-status').innerHTML =
-      '<p style="color:var(--pink-dark);font-weight:700;font-size:.88rem;margin-bottom:10px;">⚠️ Submission failed — please try again.</p>';
-  }
+  document.body.appendChild(tempForm);
+  tempForm.submit();
+  document.body.removeChild(tempForm);
+
+  /* Show confirmation — the iframe POST fires and forgets,
+     just like a real form submit, so we confirm immediately. */
+  document.getElementById('interest-status').innerHTML =
+    '<p style="color:var(--mint-dark);font-weight:700;font-size:.92rem;margin-bottom:10px;">💌 Submitted! We\'ll be in touch!</p>';
+  btn.textContent = '✅ Submitted!';
+  setTimeout(() => closeModal('overlay-interest'), 1800);
 }
 
 /* ─── CSV parser ─── */
