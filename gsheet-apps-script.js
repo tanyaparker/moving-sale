@@ -8,7 +8,7 @@ function getOrCreateItemsSheet() {
   let   sheet = ss.getSheetByName('Items');
   if (!sheet) {
     sheet = ss.insertSheet('Items');
-    sheet.appendRow(['id','name','price','description','imageFile','sold','emoji','color']);
+    sheet.appendRow(['id','name','price','description','imageURL','sold','emoji','color']);
     sheet.setFrozenRows(1);
   }
   return sheet;
@@ -29,7 +29,7 @@ function getItems() {
     name:        row[1].toString(),
     price:       Number(row[2]),
     description: row[3].toString(),
-    imageFile:   row[4].toString(),
+    imageURL:   row[4].toString(),
     sold:        row[5] === true || row[5] === 'TRUE',
     emoji:       row[6].toString(),
     color:       row[7].toString()
@@ -66,7 +66,7 @@ function addItem(data) {
   const sheet = getOrCreateItemsSheet();
   const id    = Date.now().toString();
   sheet.appendRow([id, data.name||'', Number(data.price)||0,
-    data.description||'', data.imageFile||'', false,
+    data.description||'', data.imageURL||'', false,
     data.emoji||'🛋️', data.color||'#fad4e0']);
   return json({ status: 'ok', id });
 }
