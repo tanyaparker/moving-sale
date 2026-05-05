@@ -1053,15 +1053,17 @@ function removeItem() {
 /* ─── Google Drive URL converter ─── */
 /* Accepts a Drive sharing link OR a direct URL and returns a src-safe URL */
 function toDriveImgUrl(url) {
-  if (!url) return '';
-  // Already a googleusercontent direct URL — use as-is
+  if (!url || !url.trim()) return '';
+  url = url.trim();
+  // Already a direct CDN URL — use as-is
   if (url.includes('googleusercontent.com')) return url;
-  // Extract file ID from any Drive URL pattern
+  // Extract file ID from any Drive sharing/view URL
   const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
                 url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (match) {
-    // thumbnail endpoint is the most reliable for <img> embedding
-    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
+    // lh3.googleusercontent.com/d/ID is the direct CDN format that works
+    // as an <img> src for any file shared as "Anyone with the link"
+    return `https://lh3.googleusercontent.com/d/${match[1]}`;
   }
   // Non-Drive URL — pass through unchanged
   return url;
