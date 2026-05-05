@@ -815,9 +815,11 @@ function render() {
     card.className = 'card' + (item.sold ? ' sold' : '');
     card.id = 'card-' + item.id;
     const h = heights[idx % heights.length];
-    const imgSrc  = toDriveImgUrl(item.imageUrl || item.imageFile);
+    const rawImgUrl = item.imageUrl || item.imageFile || '';
+    const imgSrc  = toDriveImgUrl(rawImgUrl);
+    console.log(`[img] item="${item.name}" raw="${rawImgUrl}" → src="${imgSrc}"`);
     const imgHtml = imgSrc
-      ? `<img class="card-img" src="${esc(imgSrc)}" alt="${esc(item.name)}" style="max-height:${h + 60}px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+      ? `<img class="card-img" src="${esc(imgSrc)}" alt="${esc(item.name)}" style="max-height:${h + 60}px;" referrerpolicy="no-referrer" onerror="console.error('[img-fail]','${esc(imgSrc)}',this.src);this.style.display='none';this.nextElementSibling.style.display='flex';">
          <div class="placeholder-img" style="height:${h}px;background:${item.color || '#fad4e0'};display:none;">${item.emoji || '🛋️'}</div>`
       : `<div class="placeholder-img" style="height:${h}px;background:${item.color || '#fad4e0'};">${item.emoji || '🛋️'}</div>`;
 
