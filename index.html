@@ -116,23 +116,25 @@
 
   /* ── Masonry grid ── */
   .grid {
-    column-count: 4;
-    column-gap: 22px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-flow: row;
+    gap: 22px;
     padding: 36px 32px 20px;
     max-width: 1420px;
     margin: 0 auto;
     position: relative;
     z-index: 1;
+    align-items: start;
   }
 
-  @media (max-width: 1200px) { .grid { column-count: 3; } }
-  @media (max-width:  800px) { .grid { column-count: 2; } }
-  @media (max-width:  480px) { .grid { column-count: 1; } }
+  @media (max-width: 1200px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width:  800px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width:  480px) { .grid { grid-template-columns: 1fr; } }
 
   /* ── Card ── */
   .card {
-    break-inside: avoid;
-    margin-bottom: 22px;
+    margin-bottom: 0;
     background: white;
     border-radius: var(--radius-card);
     overflow: hidden;
@@ -469,59 +471,22 @@
   }
 
   .btn-sold {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-family: 'Nunito', sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 6px 0 0;
+    display: block;
     width: 100%;
-    padding: 13px;
-    background: linear-gradient(130deg, #b89ab8, #8a6e9e);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    font-family: 'Nunito', sans-serif;
-    font-size: .95rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all .25s;
-    letter-spacing: .3px;
+    text-align: center;
+    transition: color .2s;
   }
 
-  .btn-sold:hover:not(:disabled) {
-    opacity: .88;
-    transform: scale(1.02);
-  }
-
-  .btn-unsold {
-    background: linear-gradient(130deg, #a8c8a0, #6a9e62);
-  }
-
-  .btn-remove {
-    padding: 13px;
-    background: linear-gradient(130deg, #e8a0a0, #c05858);
-    border: none;
-    border-radius: 16px;
-    color: white;
-    font-family: 'Nunito', sans-serif;
-    font-size: .95rem;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all .25s;
-    letter-spacing: .3px;
-    flex: 1;
-  }
-
-  .btn-remove:hover {
-    opacity: .88;
-    transform: scale(1.02);
-  }
-
-  .modal-action-row {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-  }
-
-  .modal-action-row .btn-sold {
-    flex: 1;
-    width: auto;
-  }
+  .btn-sold:hover { color: var(--text); }
 
   /* ── Interested people table ── */
   .people-table {
@@ -716,8 +681,6 @@
 <!-- ═══════════════ FOOTER ═══════════════ -->
 <footer>
   <span class="footer-flowers">🌷 🌼 🌻 🌼 🌷</span>
-  <button class="btn-add" onclick="openAddModal()">＋ Add Item</button>
-  <span class="footer-flowers" style="margin-top:22px;">🌷 🌼 🌻 🌼 🌷</span>
 </footer>
 
 <!-- ═══════════════ MODAL: I'm Interested ═══════════════ -->
@@ -768,14 +731,11 @@
 <div class="overlay" id="overlay-people" onclick="closeOnOverlay(event,'overlay-people')">
   <div class="modal wide" role="dialog" aria-labelledby="people-title">
     <button class="modal-close" onclick="closeModal('overlay-people')" aria-label="Close">✕</button>
-    <h2 id="people-title">💕 Interested People</h2>
+    <h2 id="people-title">Interested People</h2>
     <p class="modal-sub" id="people-item-label"></p>
-    <p id="people-item-desc" style="font-size:.93rem;color:var(--text);line-height:1.65;margin-top:-14px;margin-bottom:20px;display:none;"></p>
     <div id="people-list"></div>
-<div class="modal-action-row">
-      <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
-      <button class="btn-remove" onclick="removeItem()">🗑️ Remove Item</button>
-    </div>
+    <button class="btn-primary" onclick="openInterestFromPeople()">💌 I'm Interested</button>
+    <button class="btn-sold" id="btn-sold" onclick="markSold()">Mark as sold</button>
   </div>
 </div>
 
@@ -793,35 +753,7 @@
   </div>
 </div>
 
-<!-- ═══════════════ MODAL: Add Item ═══════════════ -->
-<div class="overlay" id="overlay-add" onclick="closeOnOverlay(event,'overlay-add')">
-  <div class="modal" role="dialog" aria-labelledby="add-title">
-    <button class="modal-close" onclick="closeModal('overlay-add')" aria-label="Close">✕</button>
-    <h2 id="add-title">🌸 Add New Item</h2>
-    <p class="modal-sub">List a furniture piece for your friends and family.</p>
-
-    <form id="add-form" onsubmit="addItem(event)" novalidate>
-      <div class="form-group">
-        <label class="field-label" for="a-name">Item Name</label>
-        <input type="text" id="a-name" placeholder="e.g. Blue Velvet Sofa" required>
-      </div>
-      <div class="form-group">
-        <label class="field-label" for="a-price">Asking Price (USD)</label>
-        <input type="number" id="a-price" placeholder="e.g. 500" min="0" required>
-      </div>
-      <div class="form-group">
-        <label class="field-label" for="a-desc">Description (optional)</label>
-        <input type="text" id="a-desc" placeholder="e.g. Seats 3, minor wear on left arm">
-      </div>
-      <div class="form-group">
-        <label class="field-label" for="a-img-url">Image URL (optional)</label>
-        <input type="text" id="a-img-url" placeholder="Paste Google Drive sharing link or any image URL">
-        <p class="helper">In Google Drive: right-click image → Share → Anyone with link → Copy link. Paste that here — it'll be converted automatically.</p>
-      </div>
-      <button type="submit" class="btn-primary">🌼 Add to Board</button>
-    </form>
-  </div>
-</div>
+<!-- Add Item modal removed -->
 
 <!-- ═══════════════ TOAST ═══════════════ -->
 <div id="toast" role="status" aria-live="polite"></div>
@@ -981,19 +913,13 @@ function intentBadge(val) {
 async function openPeopleModal(id) {
   activeItemId = String(id);
   const item = items.find(i => i.id === String(id));
-  document.getElementById('people-title').textContent = `💕 ${item.name}`;
-  document.getElementById('people-item-label').textContent = `Listed at $${Number(item.price).toLocaleString()}`;
-  const descEl = document.getElementById('people-item-desc');
-  if (item.description) {
-    descEl.textContent = item.description;
-    descEl.style.display = 'block';
-  } else {
-    descEl.style.display = 'none';
-  }
+  document.getElementById('people-title').textContent = item.name;
+  const priceStr = `Listed at $${Number(item.price).toLocaleString()}`;
+  document.getElementById('people-item-label').textContent = item.description
+    ? `${priceStr}, ${item.description}`
+    : priceStr;
 
-  const btn = document.getElementById('btn-sold');
-  btn.textContent = item.sold ? '↩️ Mark as Unsold' : '🏷️ Mark as Sold';
-  btn.classList.toggle('btn-unsold', item.sold);
+  document.getElementById('btn-sold').textContent = item.sold ? 'Mark as unsold' : 'Mark as sold';
 
   openModal('overlay-people');
 
@@ -1013,7 +939,7 @@ async function openPeopleModal(id) {
     const rows = await res.json();
 
     if (!rows.length) {
-      list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet 🌸<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
+      list.innerHTML = `<div class="no-interest">No responses for <strong>${esc(item.name)}</strong> yet.<br><span style="font-size:.85rem">Be the first — click 💌 I'm Interested!</span></div>`;
       return;
     }
 
@@ -1079,6 +1005,11 @@ function cancelPassword() {
   closeModal('overlay-pw');
 }
 
+function openInterestFromPeople() {
+  closeModal('overlay-people');
+  openInterestModal(activeItemId);
+}
+
 async function scriptPost(payload) {
   await fetch(APPS_SCRIPT_URL, {
     method: 'POST',
@@ -1118,47 +1049,21 @@ function removeItem() {
   });
 }
 
-/* ─── Add Item modal ─── */
-function openAddModal() {
-  requirePassword(() => {
-    document.getElementById('add-form').reset();
-    openModal('overlay-add');
-  });
-}
-
-async function addItem(e) {
-  e.preventDefault();
-  const name     = document.getElementById('a-name').value.trim();
-  const price    = parseInt(document.getElementById('a-price').value, 10);
-  const desc     = document.getElementById('a-desc').value.trim();
-  const imageUrl = toDriveImgUrl(document.getElementById('a-img-url').value.trim());
-
-  if (!name || isNaN(price)) { toast('⚠️ Please fill in name and price!'); return; }
-
-  const idx   = items.length % COLORS.length;
-  const color = COLORS[idx];
-  const emoji = EMOJIS[idx];
-
-  closeModal('overlay-add');
-  toast('🌸 Adding item…');
-
-  await scriptPost({ action: 'addItem', name, price, description: desc, imageUrl, emoji, color });
-  await loadItems();
-  toast('🌸 New item added to the board!');
-}
 
 /* ─── Google Drive URL converter ─── */
 /* Accepts a Drive sharing link OR a direct URL and returns a src-safe URL */
 function toDriveImgUrl(url) {
   if (!url) return '';
-  // Already a direct/embed URL — use as-is
-  if (url.includes('drive.google.com/uc') ||
-      url.includes('lh3.googleusercontent.com') ||
-      url.includes('googleusercontent.com')) return url;
-  // Sharing URL: https://drive.google.com/file/d/FILE_ID/view…
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
-  // Any other URL (non-Drive) — pass through unchanged
+  // Already a googleusercontent direct URL — use as-is
+  if (url.includes('googleusercontent.com')) return url;
+  // Extract file ID from any Drive URL pattern
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
+                url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (match) {
+    // thumbnail endpoint is the most reliable for <img> embedding
+    return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`;
+  }
+  // Non-Drive URL — pass through unchanged
   return url;
 }
 
@@ -1181,7 +1086,7 @@ function esc(str) {
 /* ─── Keyboard: close modals with Escape ─── */
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    ['overlay-interest','overlay-people','overlay-add','overlay-pw'].forEach(id => {
+    ['overlay-interest','overlay-people','overlay-pw'].forEach(id => {
       document.getElementById(id).classList.remove('open');
     });
     _pwCallback = null;
