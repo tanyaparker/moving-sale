@@ -770,6 +770,7 @@
     <button class="modal-close" onclick="closeModal('overlay-people')" aria-label="Close">✕</button>
     <h2 id="people-title">💕 Interested People</h2>
     <p class="modal-sub" id="people-item-label"></p>
+    <p id="people-item-desc" style="font-size:.93rem;color:var(--text);line-height:1.65;margin-top:-14px;margin-bottom:20px;display:none;"></p>
     <div id="people-list"></div>
 <div class="modal-action-row">
       <button class="btn-sold" id="btn-sold" onclick="markSold()">🏷️ Mark as Sold</button>
@@ -809,9 +810,13 @@
         <input type="number" id="a-price" placeholder="e.g. 500" min="0" required>
       </div>
       <div class="form-group">
-        <label class="field-label" for="a-img">Photo (optional)</label>
-        <input type="file" id="a-img" accept="image/*" onchange="previewImg(this)">
-        <img id="img-preview" src="" alt="Preview">
+        <label class="field-label" for="a-desc">Description (optional)</label>
+        <input type="text" id="a-desc" placeholder="e.g. Seats 3, minor wear on left arm">
+      </div>
+      <div class="form-group">
+        <label class="field-label" for="a-img-url">Image URL (optional)</label>
+        <input type="text" id="a-img-url" placeholder="Paste Google Drive sharing link or any image URL">
+        <p class="helper">In Google Drive: right-click image → Share → Anyone with link → Copy link. Paste that here — it'll be converted automatically.</p>
       </div>
       <button type="submit" class="btn-primary">🌼 Add to Board</button>
     </form>
@@ -841,67 +846,59 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBQdLbX-4pyawt
    ════════════════════════════════════════════════════ */
 /* GOOGLE_SHEETS_CSV_URL removed — reads now go through APPS_SCRIPT_URL instead */
 
-/* ─── palette pools ─── */
-const COLORS  = ['#fad4e0','#e0d4fa','#d4fae8','#fae4d4','#d4eefa','#faf4d4','#f0d4fa'];
-const EMOJIS  = ['🛋️','🪑','🛏️','🪞','📚','☕','🖼️','🏮','🪴','🕯️','🧸','🗄️','🛁','🪟'];
-
-/* ─── seed data ─── */
-function seedItems() {
-  return [
-    { id:1, name:'Velvet Sofa',           price:500, emoji:'🛋️', color:'#fad4e0', imgData:null, interested:[], sold:false },
-    { id:2, name:'Walnut Dining Table',   price:350, emoji:'🍽️', color:'#fae4d4', imgData:null, interested:[], sold:false },
-    { id:3, name:'Bookshelf',             price:120, emoji:'📚', color:'#e0d4fa', imgData:null, interested:[], sold:false },
-    { id:4, name:'Queen Bed Frame',       price:275, emoji:'🛏️', color:'#d4fae8', imgData:null, interested:[], sold:false },
-    { id:5, name:'Vintage Armchair',      price:180, emoji:'🪑', color:'#d4eefa', imgData:null, interested:[], sold:false },
-    { id:6, name:'Mid-Century Coffee Table', price:95, emoji:'☕', color:'#faf4d4', imgData:null, interested:[], sold:false },
-    { id:7, name:'Standing Floor Mirror',  price:140, emoji:'🪞', color:'#f0d4fa', imgData:null, interested:[], sold:false },
-    { id:8, name:'6-Drawer Dresser',      price:230, emoji:'🗄️', color:'#fad4e0', imgData:null, interested:[], sold:false },
-  ];
-}
+/* ─── palette pools (for new items without images) ─── */
+const COLORS = ['#fad4e0','#e0d4fa','#d4fae8','#fae4d4','#d4eefa','#faf4d4','#f0d4fa'];
+const EMOJIS = ['🛋️','🪑','🛏️','🪞','📚','☕','🖼️','🏮','🪴','🕯️','🧸','🗄️','🛁','🪟'];
 
 /* ─── state ─── */
 let items = [];
 let activeItemId = null;
 
-/* ─── persistence ─── */
-function save()  { try { localStorage.setItem('movingSale_v2', JSON.stringify(items)); } catch(e){} }
-function load()  {
+/* ─── fetch items from Apps Script (shared source of truth) ─── */
+async function loadItems() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<div class="loading-state" style="padding:60px 20px;text-align:center;">🌸 Loading items…</div>';
   try {
-    const raw = localStorage.getItem('movingSale_v2');
-    if (raw) { items = JSON.parse(raw); return; }
-  } catch(e) {}
-  items = seedItems();
+    const res  = await fetch(APPS_SCRIPT_URL + '?action=items');
+    const data = await res.json();
+    items = data;
+    render();
+  } catch (err) {
+    grid.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-light);">⚠️ Could not load items. Check your Apps Script URL and deployment.</div>';
+    console.error('loadItems error:', err);
+  }
 }
 
 /* ─── render grid ─── */
 function render() {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
-
-  items.forEach(item => {
+  if (!items.length) {
+    grid.innerHTML = '<div style="text-align:center;padding:60px 20px;color:var(--text-light);font-style:italic;">No items listed yet. Click ＋ Add Item to get started!</div>';
+    return;
+  }
+  const heights = [170, 200, 225, 185, 210, 190, 215, 180];
+  items.forEach((item, idx) => {
     const card = document.createElement('div');
     card.className = 'card' + (item.sold ? ' sold' : '');
     card.id = 'card-' + item.id;
-
-    /* vary placeholder height for Pinterest feel */
-    const heights = [170, 200, 225, 185, 210, 190, 215, 180];
-    const h = heights[(item.id - 1) % heights.length];
-
-    const imgHtml = item.imgData
-      ? `<img class="card-img" src="${item.imgData}" alt="${esc(item.name)}" style="max-height:${h + 60}px;">`
-      : `<div class="placeholder-img" style="height:${h}px;background:${item.color};">${item.emoji}</div>`;
+    const h = heights[idx % heights.length];
+    const imgSrc  = toDriveImgUrl(item.imageUrl || item.imageFile);
+    const imgHtml = imgSrc
+      ? `<img class="card-img" src="${esc(imgSrc)}" alt="${esc(item.name)}" style="max-height:${h + 60}px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+         <div class="placeholder-img" style="height:${h}px;background:${item.color || '#fad4e0'};display:none;">${item.emoji || '🛋️'}</div>`
+      : `<div class="placeholder-img" style="height:${h}px;background:${item.color || '#fad4e0'};">${item.emoji || '🛋️'}</div>`;
 
     card.innerHTML = `
       <div class="sold-ribbon">SOLD 💕</div>
-      <div class="card-img-wrap" onclick="openPeopleModal(${item.id})" title="Click to view interest">
+      <div class="card-img-wrap" onclick="openPeopleModal('${item.id}')" title="Click to view interest">
         ${imgHtml}
       </div>
       <div class="card-body">
         <div class="card-name">${esc(item.name)}</div>
-        <div class="card-price">$${item.price.toLocaleString()}</div>
-        <button class="btn-interest" onclick="openInterestModal(${item.id})">💌 I'm Interested</button>
+        <div class="card-price">$${Number(item.price).toLocaleString()}</div>
+        <button class="btn-interest" onclick="openInterestModal('${item.id}')">💌 I'm Interested</button>
       </div>`;
-
     grid.appendChild(card);
   });
 }
@@ -914,7 +911,7 @@ function closeOnOverlay(e, id) { if (e.target.id === id) closeModal(id); }
 /* ─── Interest modal ─── */
 function openInterestModal(id) {
   activeItemId = id;
-  const item = items.find(i => i.id === id);
+  const item = items.find(i => i.id === String(id));
   document.getElementById('interest-item-label').textContent = `${item.name} — $${item.price.toLocaleString()}`;
   document.getElementById('interest-form').reset();
   document.getElementById('bid-group').style.display = 'none';
@@ -982,10 +979,17 @@ function intentBadge(val) {
 
 /* ─── People modal — fetches live JSON from Apps Script ─── */
 async function openPeopleModal(id) {
-  activeItemId = id;
-  const item = items.find(i => i.id === id);
+  activeItemId = String(id);
+  const item = items.find(i => i.id === String(id));
   document.getElementById('people-title').textContent = `💕 ${item.name}`;
-  document.getElementById('people-item-label').textContent = `Listed at $${item.price.toLocaleString()}`;
+  document.getElementById('people-item-label').textContent = `Listed at $${Number(item.price).toLocaleString()}`;
+  const descEl = document.getElementById('people-item-desc');
+  if (item.description) {
+    descEl.textContent = item.description;
+    descEl.style.display = 'block';
+  } else {
+    descEl.style.display = 'none';
+  }
 
   const btn = document.getElementById('btn-sold');
   btn.textContent = item.sold ? '↩️ Mark as Unsold' : '🏷️ Mark as Sold';
@@ -1075,28 +1079,42 @@ function cancelPassword() {
   closeModal('overlay-pw');
 }
 
+async function scriptPost(payload) {
+  await fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode:   'no-cors',
+    body:   JSON.stringify(payload),
+  });
+}
+
 function markSold() {
-  requirePassword(() => {
-    const item = items.find(i => i.id === activeItemId);
-    if (item.sold) {
-      item.sold = false;
-      save(); render(); closeModal('overlay-people');
-      toast(`↩️ "${item.name}" relisted as available!`);
-    } else {
-      item.sold = true;
-      save(); render(); closeModal('overlay-people');
-      toast(`🏷️ "${item.name}" marked as sold!`);
-    }
+  requirePassword(async () => {
+    const item    = items.find(i => i.id === activeItemId);
+    const newSold = !item.sold;
+    /* optimistic update */
+    item.sold = newSold;
+    render();
+    closeModal('overlay-people');
+    toast(newSold ? `🏷️ "${item.name}" marked as sold!` : `↩️ "${item.name}" relisted as available!`);
+    /* persist to sheet */
+    await scriptPost({ action: 'updateSold', id: item.id, sold: newSold });
+    /* refresh to confirm */
+    await loadItems();
   });
 }
 
 function removeItem() {
-  requirePassword(() => {
+  requirePassword(async () => {
     const item = items.find(i => i.id === activeItemId);
     if (!confirm(`Remove "${item.name}" from the board? This can't be undone.`)) return;
+    /* optimistic update */
     items = items.filter(i => i.id !== activeItemId);
-    save(); render(); closeModal('overlay-people');
+    render();
+    closeModal('overlay-people');
     toast(`🗑️ "${item.name}" removed from the board.`);
+    /* persist to sheet */
+    await scriptPost({ action: 'deleteItem', id: item.id });
+    await loadItems();
   });
 }
 
@@ -1104,50 +1122,44 @@ function removeItem() {
 function openAddModal() {
   requirePassword(() => {
     document.getElementById('add-form').reset();
-    document.getElementById('img-preview').style.display = 'none';
     openModal('overlay-add');
   });
 }
 
-function previewImg(input) {
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const prev = document.getElementById('img-preview');
-      prev.src = e.target.result;
-      prev.style.display = 'block';
-    };
-    reader.readAsDataURL(input.files[0]);
-  }
-}
-
-function addItem(e) {
+async function addItem(e) {
   e.preventDefault();
-  const name  = document.getElementById('a-name').value.trim();
-  const price = parseInt(document.getElementById('a-price').value, 10);
-  const file  = document.getElementById('a-img').files[0];
+  const name     = document.getElementById('a-name').value.trim();
+  const price    = parseInt(document.getElementById('a-price').value, 10);
+  const desc     = document.getElementById('a-desc').value.trim();
+  const imageUrl = toDriveImgUrl(document.getElementById('a-img-url').value.trim());
 
   if (!name || isNaN(price)) { toast('⚠️ Please fill in name and price!'); return; }
 
-  const newId   = items.length ? Math.max(...items.map(i => i.id)) + 1 : 1;
-  const color   = COLORS [newId % COLORS.length];
-  const emoji   = EMOJIS [newId % EMOJIS.length];
+  const idx   = items.length % COLORS.length;
+  const color = COLORS[idx];
+  const emoji = EMOJIS[idx];
 
-  const push = (imgData) => {
-    items.push({ id:newId, name, price, emoji, color, imgData: imgData || null, interested:[], sold:false });
-    save();
-    render();
-    closeModal('overlay-add');
-    toast('🌸 New item added to the board!');
-  };
+  closeModal('overlay-add');
+  toast('🌸 Adding item…');
 
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = ev => push(ev.target.result);
-    reader.readAsDataURL(file);
-  } else {
-    push(null);
-  }
+  await scriptPost({ action: 'addItem', name, price, description: desc, imageUrl, emoji, color });
+  await loadItems();
+  toast('🌸 New item added to the board!');
+}
+
+/* ─── Google Drive URL converter ─── */
+/* Accepts a Drive sharing link OR a direct URL and returns a src-safe URL */
+function toDriveImgUrl(url) {
+  if (!url) return '';
+  // Already a direct/embed URL — use as-is
+  if (url.includes('drive.google.com/uc') ||
+      url.includes('lh3.googleusercontent.com') ||
+      url.includes('googleusercontent.com')) return url;
+  // Sharing URL: https://drive.google.com/file/d/FILE_ID/view…
+  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  // Any other URL (non-Drive) — pass through unchanged
+  return url;
 }
 
 /* ─── Toast ─── */
@@ -1177,8 +1189,7 @@ document.addEventListener('keydown', e => {
 });
 
 /* ─── Init ─── */
-load();
-render();
+loadItems();
 </script>
 </body>
 </html>
